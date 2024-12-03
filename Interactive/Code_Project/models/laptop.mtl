@@ -1,0 +1,169 @@
+# Blender 4.2.1 LTS MTL File: 'ASUS Laptop.blend'
+# www.blender.org
+
+newmtl Acer-Logo_2011
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/ROG_Logo.png
+
+newmtl Blue
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.004753 0.000000 0.273831
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/blue.jpg
+
+newmtl Body
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.538225 0.538225 0.538225
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+
+
+newmtl Display
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/ASUS_Screen.jpg
+
+newmtl Full_HD_Sticker
+Ns 810.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/Full_HD.jpg
+map_d ./models/Materials/Laptop_texture/Full_HD.jpg
+
+newmtl Glow
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/red.png
+
+newmtl Gold
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.969922 0.572649 0.096432
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/gold.jpg
+
+newmtl Keycaps
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/mat_black.png
+
+newmtl Keycaps_lable_3
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/Keycaps_lable.png
+
+newmtl Material.001
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/Lowpoly_Laptop.jpg
+map_Bump -bm 0.700000 ./models/Materials/Laptop_texture/Lowpoly_Laptop_Nor_2.jpg
+
+newmtl Material.003
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.626663 0.362476 0.003479
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Matte_Black
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.004242 0.004242 0.004242
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/mat_black.png
+
+newmtl RTX_Sticker
+Ns 810.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/RTX_Sticker.png
+map_d ./models/Materials/Laptop_texture/RTX_Sticker.png
+
+newmtl Ryzen_Sticker
+Ns 810.000000
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+illum 2
+map_Kd ./models/Materials/Laptop_texture/Ryzen_Sticker.jpg
+map_d ./models/Materials/Laptop_texture/Ryzen_Sticker.jpg
+
+newmtl Web_cam
+Ns 889.743958
+Ka 1.000000 1.000000 1.000000
+Kd 0.035218 0.035218 0.035218
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Webcam_lens
+Ns 1000.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 0.120567
+illum 9

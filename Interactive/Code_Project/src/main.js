@@ -1,0 +1,484 @@
+// main.js
+import { mat4 } from 'gl-matrix';
+
+// Define an array of objects to showcase
+const objects = [
+    { objPath: './models/laptop.obj', mtlPath: './models/laptop.mtl' },
+    // Add more objects as needed
+];
+
+let currentObjectIndex = 0;
+
+async function loadOBJ(objUrl, mtlUrl) {
+    const [objResponse, mtlResponse] = await Promise.all([
+        fetch(objUrl),
+        fetch(mtlUrl)
+    ]);
+    const [objText, mtlText] = await Promise.all([
+        objResponse.text(),
+        mtlResponse.text()
+    ]);
+
+    const materials = parseMTL(mtlText);
+    const materialNameToIndex = {};
+    materials.forEach((mat, index) => {
+        materialNameToIndex[mat.name] = index;
+    });
+
+    const positions = [];
+    const normals = [];
+    const texCoords = [];
+    const materialGroups = []; // Array to hold groups of indices per material
+
+    // Temporary arrays
+    const tempPositions = [];
+    const tempNormals = [];
+    const tempTexCoords = [];
+
+    let currentMaterialIndex = -1;
+
+    const lines = objText.split('\n');
+    for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        switch (parts[0]) {
+            case 'v':
+                tempPositions.push([
+                    parseFloat(parts[1]),
+                    parseFloat(parts[2]),
+                    parseFloat(parts[3])
+                ]);
+                break;
+            case 'vn':
+                tempNormals.push([
+                    parseFloat(parts[1]),
+                    parseFloat(parts[2]),
+                    parseFloat(parts[3])
+                ]);
+                break;
+            case 'vt':
+                tempTexCoords.push([
+                    parseFloat(parts[1]),
+                    1 - parseFloat(parts[2]) // Flip Y coordinate
+                ]);
+                break;
+            case 'usemtl':
+                currentMaterialIndex = materialNameToIndex[parts[1]];
+                if (currentMaterialIndex === undefined) {
+                    console.warn(`Material ${parts[1]} not found.`);
+                    currentMaterialIndex = -1;
+                }
+                if (!materialGroups[currentMaterialIndex]) {
+                    materialGroups[currentMaterialIndex] = {
+                        indices: [],
+                        positions: [],
+                        normals: [],
+                        texCoords: [],
+                    };
+                }
+                break;
+            case 'f':
+                if (currentMaterialIndex === -1) {
+                    console.warn('Face without material, skipping.');
+                    continue;
+                }
+                const group = materialGroups[currentMaterialIndex];
+                for (let i = 1; i <= 3; i++) {
+                    const [v, vt, vn] = parts[i].split('/').map(x => parseInt(x) - 1);
+                    group.positions.push(...tempPositions[v]);
+                    group.texCoords.push(...tempTexCoords[vt]);
+                    group.normals.push(...tempNormals[vn]);
+                    group.indices.push(group.indices.length);
+                }
+                break;
+        }
+    }
+
+    return {
+        materialGroups,
+        materials,
+    };
+}
+
+function parseMTL(mtlText) {
+    const materials = [];
+    let currentMaterial = null;
+
+    for (const line of mtlText.split('\n')) {
+        const parts = line.trim().split(/\s+/);
+        switch (parts[0]) {
+            case 'newmtl':
+                currentMaterial = { name: parts[1] };
+                materials.push(currentMaterial);
+                break;
+            case 'map_Kd':
+                currentMaterial.texture = parts[1];
+                break;
+        }
+    }
+
+    return materials;
+}
+
+async function loadTexture(device, url) {
+    try {
+        const basePath = './models/Materials/Laptop_texture/';
+        const fullUrl = url.startsWith('./') ? url : basePath + url;
+        console.log('Attempting to load texture:', fullUrl);
+
+        const response = await fetch(fullUrl);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const blob = await response.blob();
+        const imageData = await createImageBitmap(blob);
+
+        const texture = device.createTexture({
+            size: [imageData.width, imageData.height, 1],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+
+        device.queue.copyExternalImageToTexture(
+            { source: imageData },
+            { texture: texture },
+            [imageData.width, imageData.height]
+        );
+
+        console.log('Texture loaded successfully:', fullUrl);
+        return texture;
+    } catch (error) {
+        console.error('Error loading texture:', url, error);
+        // Create a 1x1 red texture as a fallback
+        const texture = device.createTexture({
+            size: [1, 1, 1],
+            format: 'rgba8unorm',
+            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+        const redPixel = new Uint8Array([255, 0, 0, 255]);
+        device.queue.writeTexture(
+            { texture: texture },
+            redPixel,
+            { bytesPerRow: 4 },
+            [1, 1]
+        );
+        console.log('Using fallback texture for:', url);
+        return texture;
+    }
+}
+
+async function initWebGPU() {
+    const canvas = document.getElementById('gpuCanvas');
+    const adapter = await navigator.gpu.requestAdapter();
+    const device = await adapter.requestDevice();
+
+    const context = canvas.getContext('webgpu');
+    const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
+    context.configure({
+        device: device,
+        format: presentationFormat,
+        usage: GPUTextureUsage.RENDER_ATTACHMENT, // Include usage flag
+    });
+
+    return { device, context, presentationFormat, canvas };
+}
+
+async function main() {
+    const { device, context, presentationFormat, canvas } = await initWebGPU();
+
+    // Shader code with improved lighting
+    const shaderCode = `
+    struct Uniforms {
+        modelMatrix : mat4x4<f32>,
+        modelViewProjectionMatrix : mat4x4<f32>,
+        normalMatrix : mat4x4<f32>,
+        cameraPosition : vec4<f32>,
+        lightPosition : vec4<f32>,
+    };
+    @binding(0) @group(0) var<uniform> uniforms : Uniforms;
+    @binding(1) @group(0) var mySampler: sampler;
+    @binding(2) @group(0) var myTexture: texture_2d<f32>;
+
+    struct VertexInput {
+        @location(0) position : vec3<f32>,
+        @location(1) normal : vec3<f32>,
+        @location(2) texCoord : vec2<f32>,
+    };
+
+    struct VertexOutput {
+        @builtin(position) position : vec4<f32>,
+        @location(0) normal : vec3<f32>,
+        @location(1) texCoord : vec2<f32>,
+        @location(2) worldPos : vec3<f32>,
+    };
+
+    @vertex
+    fn vertexMain(input: VertexInput) -> VertexOutput {
+        var output: VertexOutput;
+        output.position = uniforms.modelViewProjectionMatrix * vec4<f32>(input.position, 1.0);
+        output.normal = (uniforms.normalMatrix * vec4<f32>(input.normal, 0.0)).xyz;
+        output.texCoord = input.texCoord;
+        output.worldPos = (uniforms.modelMatrix * vec4<f32>(input.position, 1.0)).xyz;
+        return output;
+    }
+
+    @fragment
+    fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
+        let normal = normalize(input.normal);
+        let lightDir = normalize(uniforms.lightPosition.xyz - input.worldPos);
+        let viewDir = normalize(uniforms.cameraPosition.xyz - input.worldPos);
+        let reflectDir = reflect(-lightDir, normal);
+
+        let ambientStrength = 0.2;
+        let ambient = ambientStrength;
+
+        let diffuseStrength = 0.7;
+        let diffuse = diffuseStrength * max(dot(normal, lightDir), 0.0);
+
+        let specularStrength = 0.5;
+        let shininess = 32.0;
+        let specular = specularStrength * pow(max(dot(viewDir, reflectDir), 0.0), shininess);
+
+        let texColor = textureSample(myTexture, mySampler, input.texCoord);
+
+        let finalColor = texColor.rgb * (ambient + diffuse) + vec3<f32>(specular);
+
+        return vec4<f32>(finalColor, texColor.a);
+    }
+    `;
+
+    const pipeline = device.createRenderPipeline({
+        layout: 'auto',
+        vertex: {
+            module: device.createShaderModule({ code: shaderCode }),
+            entryPoint: 'vertexMain',
+            buffers: [
+                { arrayStride: 3 * 4, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+                { arrayStride: 3 * 4, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x3' }] },
+                { arrayStride: 2 * 4, attributes: [{ shaderLocation: 2, offset: 0, format: 'float32x2' }] },
+            ]
+        },
+        fragment: {
+            module: device.createShaderModule({ code: shaderCode }),
+            entryPoint: 'fragmentMain',
+            targets: [{ format: presentationFormat }],
+        },
+        primitive: { topology: 'triangle-list' },
+        depthStencil: {
+            depthWriteEnabled: true,
+            depthCompare: 'less',
+            format: 'depth24plus',
+        }
+    });
+
+    // Create depth texture
+    let depthTexture = device.createTexture({
+        size: [canvas.width, canvas.height],
+        format: 'depth24plus',
+        usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+
+    // Create uniform buffer with updated size
+    const uniformBufferSize = 224; // 56 floats * 4 bytes
+    const uniformBuffer = device.createBuffer({
+        size: uniformBufferSize,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+
+    const sampler = device.createSampler({
+        magFilter: 'linear',
+        minFilter: 'linear',
+    });
+
+    // Add rotation and zoom variables
+    let rotationX = 0;
+    let rotationY = 0;
+    let zoom = 5;
+
+    function createBuffer(device, data, usage) {
+        const buffer = device.createBuffer({
+            size: data.byteLength,
+            usage: usage | GPUBufferUsage.COPY_DST,
+        });
+        device.queue.writeBuffer(buffer, 0, data);
+        return buffer;
+    }
+
+    async function loadObject(objectIndex) {
+        const object = objects[objectIndex];
+        const { materialGroups, materials } = await loadOBJ(object.objPath, object.mtlPath);
+
+        // Load textures for each material
+        const textures = await Promise.all(materials.map(async (material) => {
+            if (material.texture) {
+                return await loadTexture(device, material.texture);
+            } else {
+                // Create a default 1x1 white texture
+                const texture = device.createTexture({
+                    size: [1, 1, 1],
+                    format: 'rgba8unorm',
+                    usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
+                });
+                const whitePixel = new Uint8Array([255, 255, 255, 255]);
+                device.queue.writeTexture(
+                    { texture: texture },
+                    whitePixel,
+                    { bytesPerRow: 4 },
+                    [1, 1]
+                );
+                return texture;
+            }
+        }));
+
+        // Prepare buffers and bind groups for each material group
+        const materialData = materialGroups.map((group, index) => {
+            if (!group) return null; // Skip empty groups
+
+            const positionBuffer = createBuffer(device, new Float32Array(group.positions), GPUBufferUsage.VERTEX);
+            const normalBuffer = createBuffer(device, new Float32Array(group.normals), GPUBufferUsage.VERTEX);
+            const texCoordBuffer = createBuffer(device, new Float32Array(group.texCoords), GPUBufferUsage.VERTEX);
+            const indexBuffer = createBuffer(device, new Uint32Array(group.indices), GPUBufferUsage.INDEX);
+
+            const bindGroup = device.createBindGroup({
+                layout: pipeline.getBindGroupLayout(0),
+                entries: [
+                    { binding: 0, resource: { buffer: uniformBuffer } },
+                    { binding: 1, resource: sampler },
+                    { binding: 2, resource: textures[index].createView() },
+                ]
+            });
+
+            return {
+                positionBuffer,
+                normalBuffer,
+                texCoordBuffer,
+                indexBuffer,
+                bindGroup,
+                indicesLength: group.indices.length,
+            };
+        });
+
+        return materialData.filter((data) => data !== null); // Filter out null entries
+    }
+
+    let materialDataArray = await loadObject(currentObjectIndex);
+
+    function render() {
+        const commandEncoder = device.createCommandEncoder();
+        const textureView = context.getCurrentTexture().createView();
+
+        const renderPassDescriptor = {
+            colorAttachments: [{
+                view: textureView,
+                clearValue: { r: 0.1, g: 0.1, b: 0.1, a: 1.0 },
+                loadOp: 'clear',
+                storeOp: 'store',
+            }],
+            depthStencilAttachment: {
+                view: depthTexture.createView(),
+                depthClearValue: 1.0,
+                depthLoadOp: 'clear',
+                depthStoreOp: 'store',
+            }
+        };
+
+        const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
+        passEncoder.setPipeline(pipeline);
+
+        for (const data of materialDataArray) {
+            passEncoder.setBindGroup(0, data.bindGroup);
+            passEncoder.setVertexBuffer(0, data.positionBuffer);
+            passEncoder.setVertexBuffer(1, data.normalBuffer);
+            passEncoder.setVertexBuffer(2, data.texCoordBuffer);
+            passEncoder.setIndexBuffer(data.indexBuffer, 'uint32');
+            passEncoder.drawIndexed(data.indicesLength);
+        }
+
+        passEncoder.end();
+
+        device.queue.submit([commandEncoder.finish()]);
+    }
+
+    function updateUniformBuffer() {
+        const aspect = canvas.width / canvas.height;
+        const projectionMatrix = mat4.perspective(mat4.create(), Math.PI / 4, aspect, 0.1, 100.0);
+        const viewMatrix = mat4.lookAt(mat4.create(), [0, 0, zoom], [0, 0, 0], [0, 1, 0]);
+        const modelMatrix = mat4.create();
+        mat4.rotate(modelMatrix, modelMatrix, rotationX, [1, 0, 0]);
+        mat4.rotate(modelMatrix, modelMatrix, rotationY, [0, 1, 0]);
+
+        const mvpMatrix = mat4.create();
+        mat4.multiply(mvpMatrix, projectionMatrix, viewMatrix);
+        mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
+
+        const normalMatrix = mat4.create();
+        mat4.invert(normalMatrix, modelMatrix);
+        mat4.transpose(normalMatrix, normalMatrix);
+
+        // Camera and light positions
+        const cameraPosition = [0, 0, zoom, 1.0];
+        const lightPosition = [5, 5, 5, 1.0];
+
+        // Create uniform data buffer
+        const uniformData = new Float32Array(56);
+        uniformData.set(modelMatrix, 0);
+        uniformData.set(mvpMatrix, 16);
+        uniformData.set(normalMatrix, 32);
+        uniformData.set(cameraPosition, 48);
+        uniformData.set(lightPosition, 52);
+
+        device.queue.writeBuffer(uniformBuffer, 0, uniformData);
+    }
+
+    function resizeCanvas() {
+        const devicePixelRatio = window.devicePixelRatio || 1;
+        canvas.width = canvas.clientWidth * devicePixelRatio;
+        canvas.height = canvas.clientHeight * devicePixelRatio;
+
+        // Update depth texture size
+        depthTexture.destroy();
+        depthTexture = device.createTexture({
+            size: [canvas.width, canvas.height],
+            format: 'depth24plus',
+            usage: GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+    }
+
+    // Call resizeCanvas initially and add event listener
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+
+    // Add event listeners for rotation and zoom
+    canvas.addEventListener('mousemove', (e) => {
+        if (e.buttons === 1) {
+            rotationY += e.movementX * 0.01;
+            rotationX += e.movementY * 0.01;
+        }
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+        zoom += e.deltaY * 0.01;
+        zoom = Math.max(1, Math.min(zoom, 20));
+    });
+
+    // Add event listeners for next and previous buttons
+    document.getElementById('nextButton').addEventListener('click', async () => {
+        currentObjectIndex = (currentObjectIndex + 1) % objects.length;
+        materialDataArray = await loadObject(currentObjectIndex);
+    });
+
+    document.getElementById('prevButton').addEventListener('click', async () => {
+        currentObjectIndex = (currentObjectIndex - 1 + objects.length) % objects.length;
+        materialDataArray = await loadObject(currentObjectIndex);
+    });
+
+    function frame() {
+        updateUniformBuffer();
+        render();
+        requestAnimationFrame(frame);
+    }
+
+    frame();
+}
+
+main();
