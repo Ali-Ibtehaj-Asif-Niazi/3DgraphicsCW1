@@ -422,36 +422,100 @@ async function main() {
         device.queue.submit([commandEncoder.finish()]);
     }
 
+    // Camera position and rotation variables
+    let cameraPosition = [0, 0, zoom]; // [x, y, z]
+    let cameraRotation = [0, 0];       // [rotationX, rotationY]
+
+    let isPanning = false;
+    let lastPanPosition = { x: 0, y: 0 };
+
+    canvas.addEventListener('mousedown', (e) => {
+        if (e.button === 2) { // Right mouse button
+            isPanning = true;
+            lastPanPosition.x = e.clientX;
+            lastPanPosition.y = e.clientY;
+        }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (isPanning) {
+            const deltaX = e.clientX - lastPanPosition.x;
+            const deltaY = e.clientY - lastPanPosition.y;
+
+            const panSpeed = 0.005; // Adjust pan speed as needed
+
+            // Update camera position based on mouse movement
+            cameraPosition[0] -= deltaX * panSpeed;
+            cameraPosition[1] += deltaY * panSpeed;
+
+            lastPanPosition.x = e.clientX;
+            lastPanPosition.y = e.clientY;
+        } else if (e.buttons === 1) { // Left mouse button for rotation
+            rotationY += e.movementX * 0.01;
+            rotationX += e.movementY * 0.01;
+        }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+        if (e.button === 2) { // Right mouse button
+            isPanning = false;
+        }
+    });
+
+    // Prevent context menu from appearing on right-click
+    canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+        zoom += e.deltaY * 0.01;
+        zoom = Math.max(1, Math.min(zoom, 20));
+        cameraPosition[2] = zoom; // Update camera Z position
+    });
+
+
     function updateUniformBuffer() {
         const aspect = canvas.width / canvas.height;
         const projectionMatrix = mat4.perspective(mat4.create(), Math.PI / 4, aspect, 0.1, 100.0);
-        const viewMatrix = mat4.lookAt(mat4.create(), [0, 0, zoom], [0, 0, 0], [0, 1, 0]);
+    
+        // Create the view matrix
+        const viewMatrix = mat4.create();
+    
+        // Apply camera rotation
+        mat4.rotateX(viewMatrix, viewMatrix, cameraRotation[0]);
+        mat4.rotateY(viewMatrix, viewMatrix, cameraRotation[1]);
+    
+        // Apply camera translation
+        mat4.translate(viewMatrix, viewMatrix, [-cameraPosition[0], -cameraPosition[1], -cameraPosition[2]]);
+    
         const modelMatrix = mat4.create();
         mat4.rotate(modelMatrix, modelMatrix, rotationX, [1, 0, 0]);
         mat4.rotate(modelMatrix, modelMatrix, rotationY, [0, 1, 0]);
-
+    
         const mvpMatrix = mat4.create();
         mat4.multiply(mvpMatrix, projectionMatrix, viewMatrix);
         mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
-
+    
         const normalMatrix = mat4.create();
         mat4.invert(normalMatrix, modelMatrix);
         mat4.transpose(normalMatrix, normalMatrix);
-
+    
         // Camera and light positions
-        const cameraPosition = [0, 0, zoom, 1.0];
+        // Update cameraPosition here if necessary
+        const cameraPos = [...cameraPosition, 1.0];
         const lightPosition = [5, 5, 5, 1.0];
-
+    
         // Create uniform data buffer
         const uniformData = new Float32Array(56);
         uniformData.set(modelMatrix, 0);
         uniformData.set(mvpMatrix, 16);
         uniformData.set(normalMatrix, 32);
-        uniformData.set(cameraPosition, 48);
+        uniformData.set(cameraPos, 48);
         uniformData.set(lightPosition, 52);
-
+    
         device.queue.writeBuffer(uniformBuffer, 0, uniformData);
     }
+    
 
     function resizeCanvas() {
         const devicePixelRatio = window.devicePixelRatio || 1;
