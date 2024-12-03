@@ -422,6 +422,22 @@ async function main() {
         device.queue.submit([commandEncoder.finish()]);
     }
 
+    let isRotating = false; // Indicates whether the object is rotating automatically
+    
+    // Update the rotation status display
+    function updateRotationStatus() {
+        const statusElement = document.getElementById('rotationStatus');
+        statusElement.textContent = `Rotation: ${isRotating ? 'On' : 'Off'}`;
+    }
+    // Add event listener for key presses
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'r' || e.key === 'R') {
+            isRotating = !isRotating; // Toggle rotation state
+            updateRotationStatus(); // Update the display
+        }
+    });
+
+
     // Camera position and rotation variables
     let cameraPosition = [0, 0, zoom]; // [x, y, z]
     let cameraRotation = [0, 0];       // [rotationX, rotationY]
@@ -560,10 +576,13 @@ async function main() {
     });
 
     function frame() {
+        if (isRotating) {
+            rotationY += 0.01; // Adjust rotation speed as needed
+        }
         updateUniformBuffer();
         render();
         requestAnimationFrame(frame);
-    }
+    }    
 
     frame();
 }
