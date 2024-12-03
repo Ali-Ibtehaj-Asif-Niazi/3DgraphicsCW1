@@ -4,6 +4,9 @@ import { mat4 } from 'gl-matrix';
 // Define an array of objects to showcase
 const objects = [
     { objPath: './models/laptop.obj', mtlPath: './models/laptop.mtl' },
+    { objPath: './models/camera.obj', mtlPath: './models/camera.mtl' },
+    { objPath: './models/headphones.obj', mtlPath: './models/headphones.mtl' },
+    { objPath: './models/cup.obj', mtlPath: './models/cup.mtl' },
     // Add more objects as needed
 ];
 
@@ -83,10 +86,29 @@ async function loadOBJ(objUrl, mtlUrl) {
                 }
                 const group = materialGroups[currentMaterialIndex];
                 for (let i = 1; i <= 3; i++) {
-                    const [v, vt, vn] = parts[i].split('/').map(x => parseInt(x) - 1);
+                    const indices = parts[i].split('/');
+                    const v = parseInt(indices[0]) - 1;
+                    const vt = indices[1] !== undefined && indices[1] !== '' ? parseInt(indices[1]) - 1 : null;
+                    const vn = indices[2] !== undefined && indices[2] !== '' ? parseInt(indices[2]) - 1 : null;
+
                     group.positions.push(...tempPositions[v]);
-                    group.texCoords.push(...tempTexCoords[vt]);
-                    group.normals.push(...tempNormals[vn]);
+
+                    // Handle texture coordinates
+                    if (vt !== null && tempTexCoords[vt]) {
+                        group.texCoords.push(...tempTexCoords[vt]);
+                    } else {
+                        // Default texture coordinates if missing
+                        group.texCoords.push(0, 0);
+                    }
+
+                    // Handle normals
+                    if (vn !== null && tempNormals[vn]) {
+                        group.normals.push(...tempNormals[vn]);
+                    } else {
+                        // Default normal if missing
+                        group.normals.push(0, 0, 1);
+                    }
+
                     group.indices.push(group.indices.length);
                 }
                 break;
@@ -98,6 +120,7 @@ async function loadOBJ(objUrl, mtlUrl) {
         materials,
     };
 }
+
 
 function parseMTL(mtlText) {
     const materials = [];

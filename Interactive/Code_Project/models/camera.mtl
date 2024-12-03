@@ -1,0 +1,101 @@
+# Blender 4.2.1 LTS MTL File: 'camera.blend'
+# www.blender.org
+
+newmtl Black_Plastic
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.000000 0.000000 0.000000
+Ks 0.272727 0.272727 0.272727
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Camera_texture/Black_Plastic.jpg
+
+newmtl Brushed_Aluminum_2
+Ns 1000.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.254204 0.254204 0.254204
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Kd ./models/Materials/Camera_texture/silver_solid.jpg
+
+newmtl Glass.002
+Ns 998.001038
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 2.000000
+d 1.000000
+illum 3
+map_Kd ./models/Materials/Camera_texture/flash.jpg
+
+newmtl Glossy_Reflective_Spectrum_Glass
+Ns 998.001038
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Camera_texture/lens3.jpg
+
+newmtl Leather
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+
+newmtl Leather.001
+Ns 360.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Camera_texture/black.jpg
+
+newmtl Leather_Fabric_56
+Ka 1.000000 1.000000 1.000000
+Kd 0.080000 0.080000 0.080000
+Ks 0.200000 0.200000 0.200000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Ns C:/fabric-56_smooth.jpg
+map_Kd ./models/Materials/Camera_texture/offwhite.jpg
+
+newmtl Metal.001
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3
+map_Bump -bm 0.300000 ./models/Materials/Camera_texture/silver.jpg
+map_Kd ./models/Materials/Camera_texture/silver.jpg
+
+newmtl Realistic_old_procedural_silver
+Ns 250.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.800000 0.800000 0.800000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.000000
+d 1.000000
+illum 2
+map_Kd ./models/Materials/Camera_texture/silver_solid.jpg
