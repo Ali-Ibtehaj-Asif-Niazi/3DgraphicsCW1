@@ -60,6 +60,60 @@
             border-radius: 5px;
             font-family: Arial, sans-serif;
         }
+        /* Effect Buttons */
+        .effect-button1 {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-right: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+        .effect-button1:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .effect-button2 {
+            position: absolute;
+            bottom: 90px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-right: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+        .effect-button2:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
+
+        .effect-button3 {
+            position: absolute;
+            bottom: 50px;
+            left: 10px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            margin-right: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
+        .effect-button3:hover {
+            background-color: rgba(0, 0, 0, 0.9);
+        }
     </style>
 </head>
 <body>
@@ -69,6 +123,9 @@
     <!-- Right Arrow Button -->
     <button id="nextButton">&#10095;</button>
     <!-- Rotation Status Display -->
+    <button id="noEffectButton" class="effect-button1">No Effect</button>
+    <button id="grayscaleButton" class="effect-button2">Grayscale</button>
+    <button id="invertButton" class="effect-button3">Invert Colors</button>
     <div id="rotationStatus">Rotation: Off</div>
     <script type="module" src="src/main.js"></script>
 </body>

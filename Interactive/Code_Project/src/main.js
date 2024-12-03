@@ -1,5 +1,6 @@
 // main.js
 import { mat4 } from 'gl-matrix';
+import { PostProcess } from './postprocess.js'; // Adjust the path if necessary
 
 // Define an array of objects to showcase
 const objects = [
@@ -301,6 +302,11 @@ async function main() {
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
+    // Initialize PostProcess
+    const postProcess = new PostProcess(device, presentationFormat, canvas);
+    postProcess.setDepthTexture(depthTexture);
+    postProcess.setContext(context);
+
     // Create uniform buffer with updated size
     const uniformBufferSize = 224; // 56 floats * 4 bytes
     const uniformBuffer = device.createBuffer({
@@ -386,6 +392,19 @@ async function main() {
 
     let materialDataArray = await loadObject(currentObjectIndex);
 
+    function renderScene(passEncoder) {
+        passEncoder.setPipeline(pipeline);
+    
+        for (const data of materialDataArray) {
+            passEncoder.setBindGroup(0, data.bindGroup);
+            passEncoder.setVertexBuffer(0, data.positionBuffer);
+            passEncoder.setVertexBuffer(1, data.normalBuffer);
+            passEncoder.setVertexBuffer(2, data.texCoordBuffer);
+            passEncoder.setIndexBuffer(data.indexBuffer, 'uint32');
+            passEncoder.drawIndexed(data.indicesLength);
+        }
+    }
+
     function render() {
         const commandEncoder = device.createCommandEncoder();
         const textureView = context.getCurrentTexture().createView();
@@ -403,7 +422,7 @@ async function main() {
                 depthLoadOp: 'clear',
                 depthStoreOp: 'store',
             }
-        };
+        }; 
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
         passEncoder.setPipeline(pipeline);
@@ -420,6 +439,8 @@ async function main() {
         passEncoder.end();
 
         device.queue.submit([commandEncoder.finish()]);
+        // Render the scene to texture and apply post-processing
+        postProcess.renderSceneToTexture(renderScene);
     }
 
     let isRotating = false; // Indicates whether the object is rotating automatically
@@ -534,10 +555,13 @@ async function main() {
     
 
     function resizeCanvas() {
+        // Update postProcess
+        postProcess.setDepthTexture(depthTexture);
+        postProcess.resize();
         const devicePixelRatio = window.devicePixelRatio || 1;
         canvas.width = canvas.clientWidth * devicePixelRatio;
         canvas.height = canvas.clientHeight * devicePixelRatio;
-
+    
         // Update depth texture size
         depthTexture.destroy();
         depthTexture = device.createTexture({
@@ -545,7 +569,12 @@ async function main() {
             format: 'depth24plus',
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
+    
+        // Update postProcess
+        postProcess.setDepthTexture(depthTexture);
+        postProcess.resize();
     }
+    
 
     // Call resizeCanvas initially and add event listener
     resizeCanvas();
@@ -574,6 +603,30 @@ async function main() {
         currentObjectIndex = (currentObjectIndex - 1 + objects.length) % objects.length;
         materialDataArray = await loadObject(currentObjectIndex);
     });
+
+
+
+    // Initial effect mode (0: No effect)
+    let effectMode = 0;
+
+    // Event listeners for buttons
+    document.getElementById('noEffectButton').addEventListener('click', () => {
+        effectMode = 0;
+        postProcess.setEffectMode(effectMode);
+    });
+
+    document.getElementById('grayscaleButton').addEventListener('click', () => {
+        effectMode = 1;
+        postProcess.setEffectMode(effectMode);
+    });
+
+    document.getElementById('invertButton').addEventListener('click', () => {
+        effectMode = 2;
+        postProcess.setEffectMode(effectMode);
+    });
+
+    // Initialize the effect mode
+    // postProcess.setEffectMode(effectMode);
 
     function frame() {
         if (isRotating) {
