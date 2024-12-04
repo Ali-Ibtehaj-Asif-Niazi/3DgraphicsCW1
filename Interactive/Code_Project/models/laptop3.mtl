@@ -167,3 +167,4 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 0.120567
 illum 9
+map_Kd ./models/Materials/Laptop_texture/webcam.png

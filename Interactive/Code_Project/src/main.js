@@ -1,20 +1,16 @@
 // main.js
+
+// Imports
 import { mat4 } from 'gl-matrix';
-import { PostProcess } from './postprocess.js'; // Adjust the path if necessary
+import { PostProcess } from './postprocess.js';
 import { shaderCode } from './shaderCode.js';
 import { initWebGPU } from './webgpu.js';
 import { loadOBJ } from './modelLoader.js';
 import { loadTexture } from './utils.js';
 
-const laptopObjPath = './models/laptop.obj';
-const materials = [
-    'laptop1.mtl',
-    'laptop2.mtl',
-    'laptop3.mtl',
-];
 // Define an array of objects to showcase
 const objects = [
-    { objPath: laptopObjPath, mtlPath: './models/laptop.mtl' },
+    { objPath: './models/laptop.obj', mtlPath: './models/laptop.mtl' },
     { objPath: './models/camera.obj', mtlPath: './models/camera.mtl' },
     { objPath: './models/headphones.obj', mtlPath: './models/headphones.mtl' },
     { objPath: './models/cup.obj', mtlPath: './models/cup.mtl' },
@@ -40,19 +36,24 @@ gui.add(settings, 'lightPosZ', -10.0, 10.0).name('Light Position Z');
 gui.add(settings, 'lightIntensity', 0.0, 10.0).name('Light Intensity');
 
 async function main() {
+    // Initialize WebGPU
     const canvas = document.getElementById('gpuCanvas');
     const { device, context, presentationFormat } = await initWebGPU(canvas);
 
+    // Create the rendering pipeline
     const pipeline = device.createRenderPipeline({
         layout: 'auto',
         vertex: {
             module: device.createShaderModule({ code: shaderCode }),
             entryPoint: 'vertexMain',
             buffers: [
+                // Position buffer
                 { arrayStride: 3 * 4, attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }] },
+                // Normal buffer
                 { arrayStride: 3 * 4, attributes: [{ shaderLocation: 1, offset: 0, format: 'float32x3' }] },
+                // Texture coordinate buffer
                 { arrayStride: 2 * 4, attributes: [{ shaderLocation: 2, offset: 0, format: 'float32x2' }] },
-            ]
+            ],
         },
         fragment: {
             module: device.createShaderModule({ code: shaderCode }),
@@ -64,7 +65,7 @@ async function main() {
             depthWriteEnabled: true,
             depthCompare: 'less',
             format: 'depth24plus',
-        }
+        },
     });
 
     // Create depth texture
@@ -74,28 +75,30 @@ async function main() {
         usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
 
-    // Initialize PostProcess
+    // Initialize PostProcess module
     const postProcess = new PostProcess(device, presentationFormat, canvas);
     postProcess.setDepthTexture(depthTexture);
     postProcess.setContext(context);
 
-    // Update the uniform buffer size
-    const uniformBufferSize = 256; // 60 floats * 4 bytes
+    // Create uniform buffer
+    const uniformBufferSize = 256; // Must be a multiple of 256
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
+    // Create a sampler
     const sampler = device.createSampler({
         magFilter: 'linear',
         minFilter: 'linear',
     });
 
-    // Add rotation and zoom variables
+    // Rotation and zoom variables
     let rotationX = 0;
     let rotationY = 0;
     let zoom = 5;
 
+    // Function to create buffers
     function createBuffer(device, data, usage) {
         const buffer = device.createBuffer({
             size: data.byteLength,
@@ -105,13 +108,14 @@ async function main() {
         return buffer;
     }
 
+    // Function to load an object
     async function loadObject(objectIndex, mtlPath = null) {
         const object = objects[objectIndex];
         const objPath = object.objPath;
         const mtlFilePath = mtlPath || object.mtlPath;
-    
+
         const { materialGroups, materials } = await loadOBJ(objPath, mtlFilePath);
-    
+
         // Load textures for each material
         const textures = await Promise.all(materials.map(async (material) => {
             if (material.texture) {
@@ -133,25 +137,25 @@ async function main() {
                 return texture;
             }
         }));
-    
+
         // Prepare buffers and bind groups for each material group
         const materialData = materialGroups.map((group, index) => {
             if (!group) return null; // Skip empty groups
-    
+
             const positionBuffer = createBuffer(device, new Float32Array(group.positions), GPUBufferUsage.VERTEX);
             const normalBuffer = createBuffer(device, new Float32Array(group.normals), GPUBufferUsage.VERTEX);
             const texCoordBuffer = createBuffer(device, new Float32Array(group.texCoords), GPUBufferUsage.VERTEX);
             const indexBuffer = createBuffer(device, new Uint32Array(group.indices), GPUBufferUsage.INDEX);
-    
+
             const bindGroup = device.createBindGroup({
                 layout: pipeline.getBindGroupLayout(0),
                 entries: [
                     { binding: 0, resource: { buffer: uniformBuffer } },
                     { binding: 1, resource: sampler },
                     { binding: 2, resource: textures[index].createView() },
-                ]
+                ],
             });
-    
+
             return {
                 positionBuffer,
                 normalBuffer,
@@ -161,15 +165,17 @@ async function main() {
                 indicesLength: group.indices.length,
             };
         });
-    
-        return materialData.filter((data) => data !== null); // Filter out null entries
-    }    
 
+        return materialData.filter((data) => data !== null); // Filter out null entries
+    }
+
+    // Load the initial object
     let materialDataArray = await loadObject(currentObjectIndex);
 
+    // Function to render the scene
     function renderScene(passEncoder) {
         passEncoder.setPipeline(pipeline);
-    
+
         for (const data of materialDataArray) {
             passEncoder.setBindGroup(0, data.bindGroup);
             passEncoder.setVertexBuffer(0, data.positionBuffer);
@@ -180,6 +186,7 @@ async function main() {
         }
     }
 
+    // Function to render
     function render() {
         const commandEncoder = device.createCommandEncoder();
         const textureView = context.getCurrentTexture().createView();
@@ -196,35 +203,29 @@ async function main() {
                 depthClearValue: 1.0,
                 depthLoadOp: 'clear',
                 depthStoreOp: 'store',
-            }
-        }; 
+            },
+        };
 
         const passEncoder = commandEncoder.beginRenderPass(renderPassDescriptor);
-        passEncoder.setPipeline(pipeline);
 
-        for (const data of materialDataArray) {
-            passEncoder.setBindGroup(0, data.bindGroup);
-            passEncoder.setVertexBuffer(0, data.positionBuffer);
-            passEncoder.setVertexBuffer(1, data.normalBuffer);
-            passEncoder.setVertexBuffer(2, data.texCoordBuffer);
-            passEncoder.setIndexBuffer(data.indexBuffer, 'uint32');
-            passEncoder.drawIndexed(data.indicesLength);
-        }
+        renderScene(passEncoder);
 
         passEncoder.end();
 
         device.queue.submit([commandEncoder.finish()]);
+
         // Render the scene to texture and apply post-processing
         postProcess.renderSceneToTexture(renderScene);
     }
 
     let isRotating = false; // Indicates whether the object is rotating automatically
-    
+
     // Update the rotation status display
     function updateRotationStatus() {
         const statusElement = document.getElementById('rotationStatus');
         statusElement.textContent = `Rotation (Press R): ${isRotating ? 'On' : 'Off'}`;
     }
+
     // Add event listener for key presses
     window.addEventListener('keydown', (e) => {
         if (e.key === 'r' || e.key === 'R') {
@@ -233,7 +234,6 @@ async function main() {
         }
     });
 
-
     // Camera position and rotation variables
     let cameraPosition = [0, 0, zoom]; // [x, y, z]
     let cameraRotation = [0, 0];       // [rotationX, rotationY]
@@ -241,8 +241,9 @@ async function main() {
     let isPanning = false;
     let lastPanPosition = { x: 0, y: 0 };
 
+    // Mouse event listeners for panning and rotation
     canvas.addEventListener('mousedown', (e) => {
-        if (e.button === 2) { // Right mouse button
+        if (e.button === 2) { // Right mouse button for panning
             isPanning = true;
             lastPanPosition.x = e.clientX;
             lastPanPosition.y = e.clientY;
@@ -279,13 +280,14 @@ async function main() {
         e.preventDefault();
     });
 
+    // Mouse wheel for zooming
     canvas.addEventListener('wheel', (e) => {
         zoom += e.deltaY * 0.01;
         zoom = Math.max(1, Math.min(zoom, 20));
         cameraPosition[2] = zoom; // Update camera Z position
     });
 
-    // Modify the `updateUniformBuffer` function
+    // Function to update the uniform buffer
     function updateUniformBuffer() {
         const aspect = canvas.width / canvas.height;
         const projectionMatrix = mat4.perspective(mat4.create(), Math.PI / 4, aspect, 0.1, 100.0);
@@ -300,14 +302,17 @@ async function main() {
         // Apply camera translation
         mat4.translate(viewMatrix, viewMatrix, [-cameraPosition[0], -cameraPosition[1], -cameraPosition[2]]);
 
+        // Create the model matrix
         const modelMatrix = mat4.create();
         mat4.rotate(modelMatrix, modelMatrix, rotationX, [1, 0, 0]);
         mat4.rotate(modelMatrix, modelMatrix, rotationY, [0, 1, 0]);
 
+        // Calculate the Model-View-Projection matrix
         const mvpMatrix = mat4.create();
         mat4.multiply(mvpMatrix, projectionMatrix, viewMatrix);
         mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
 
+        // Calculate the normal matrix
         const normalMatrix = mat4.create();
         mat4.invert(normalMatrix, modelMatrix);
         mat4.transpose(normalMatrix, normalMatrix);
@@ -318,21 +323,18 @@ async function main() {
 
         // Create uniform data buffer
         const uniformData = new Float32Array(60); // Adjusted size to include lightIntensity
-        uniformData.set(modelMatrix, 0);
-        uniformData.set(mvpMatrix, 16);
-        uniformData.set(normalMatrix, 32);
-        uniformData.set(cameraPos, 48);
-        uniformData.set(lightPosition, 52);
-        uniformData[56] = settings.lightIntensity; // Add light intensity at offset 56
+        uniformData.set(modelMatrix, 0);          // Offsets 0 - 15
+        uniformData.set(mvpMatrix, 16);           // Offsets 16 - 31
+        uniformData.set(normalMatrix, 32);        // Offsets 32 - 47
+        uniformData.set(cameraPos, 48);           // Offsets 48 - 51
+        uniformData.set(lightPosition, 52);       // Offsets 52 - 55
+        uniformData[56] = settings.lightIntensity; // Offset 56
 
         device.queue.writeBuffer(uniformBuffer, 0, uniformData);
     }
-    
 
+    // Function to resize the canvas
     function resizeCanvas() {
-        // Update postProcess
-        postProcess.setDepthTexture(depthTexture);
-        postProcess.resize();
         const devicePixelRatio = window.devicePixelRatio || 1;
         canvas.width = canvas.clientWidth * devicePixelRatio;
         canvas.height = canvas.clientHeight * devicePixelRatio;
@@ -350,14 +352,13 @@ async function main() {
         postProcess.resize();
     }
 
-
     // Call resizeCanvas initially and add event listener
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
 
-    // Add event listeners for rotation and zoom
+    // Event listeners for rotation and zoom
     canvas.addEventListener('mousemove', (e) => {
-        if (e.buttons === 1) {
+        if (e.buttons === 1) { // Left mouse button for rotation
             rotationY += e.movementX * 0.01;
             rotationX += e.movementY * 0.01;
         }
@@ -368,7 +369,7 @@ async function main() {
         zoom = Math.max(1, Math.min(zoom, 20));
     });
 
-    // Add event listeners for next and previous buttons
+    // Event listeners for next and previous buttons
     document.getElementById('nextButton').addEventListener('click', async () => {
         currentObjectIndex = (currentObjectIndex + 1) % objects.length;
         materialDataArray = await loadObject(currentObjectIndex);
@@ -379,12 +380,10 @@ async function main() {
         materialDataArray = await loadObject(currentObjectIndex);
     });
 
-
-
     // Initial effect mode (0: No effect)
     let effectMode = 0;
 
-    // Event listeners for buttons
+    // Event listeners for post-processing effect buttons
     document.getElementById('noEffectButton').addEventListener('click', () => {
         effectMode = 0;
         postProcess.setEffectMode(effectMode);
@@ -409,15 +408,16 @@ async function main() {
         await changeMaterial(selectedMaterial);
     });
 
+    // Function to change the material
     async function changeMaterial(mtlFileName) {
         // Build the full path to the material file
         const mtlPath = `./models/${mtlFileName}`;
-    
+
         // Reload the object with the new material
         materialDataArray = await loadObject(currentObjectIndex, mtlPath);
     }
-    
 
+    // Animation frame function
     function frame() {
         if (isRotating) {
             rotationY += 0.01; // Adjust rotation speed as needed
@@ -425,7 +425,7 @@ async function main() {
         updateUniformBuffer();
         render();
         requestAnimationFrame(frame);
-    }    
+    }
 
     frame();
 }
