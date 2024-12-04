@@ -274,8 +274,8 @@ function renderScene(passEncoder) {
    ```
 
 ---
-### Screenshot
-
+### **Screenshot**
+![alt text](/Interactive/Incremental%20Work/notexture.png)
 
 ### **Key Details**
 - **Material Groups**: Each material group is rendered with its corresponding textures and shaders, ensuring the object is drawn correctly.
@@ -410,6 +410,8 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 ```
 
 ---
+### **Screenshot**
+![alt text](/Interactive/Incremental%20Work/addingtexture.png)
 
 ### **Key Details**
 - **Material Groups**: Each material group corresponds to a specific texture and set of rendering parameters.
@@ -612,6 +614,8 @@ gui.add(settings, 'lightIntensity', 0.0, 10.0).name('Light Intensity');
 - **`lightIntensity`**: Ranges from `0.0` to `10.0`, enabling complete control over the light's brightness.
 
 ---
+### **Screenshot**
+![alt text](/Interactive/Incremental%20Work/datgui.png)
 
 ### **Updating Light Properties**
 The updated light properties are passed to the GPU via a uniform buffer. This ensures that the rendering pipeline reflects the latest values set through the GUI.
@@ -720,11 +724,13 @@ fn fragmentMain(@builtin(position) FragCoord : vec4<f32>) -> @location(0) vec4<f
    let gray = dot(color.rgb, vec3<f32>(0.299, 0.587, 0.114));
    color = vec4<f32>(vec3<f32>(gray), color.a);
    ```
+   ![alt text](/Interactive/Incremental%20Work/grey.png)
 
 2. **Inverted Colors**: Subtracts the color from `1.0` to produce the inverse color.
    ```javascript
    color = vec4<f32>(vec3<f32>(1.0) - color.rgb, color.a);
    ```
+   ![alt text](/Interactive/Incremental%20Work/invert.png)
 
 ---
 
