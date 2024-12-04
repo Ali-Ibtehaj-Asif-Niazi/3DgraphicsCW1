@@ -1,5 +1,5 @@
 # Interactive Visualiser
-
+![text](/Interactive/Incremental%20Work/demo.gif)
 ## Contents
 - [Frameworks/Tools Used](#frameworks-tools-used)
 - [Resources used](#resources-used)
