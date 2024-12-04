@@ -2,16 +2,38 @@
 import { mat4 } from 'gl-matrix';
 import { PostProcess } from './postprocess.js'; // Adjust the path if necessary
 
+const laptopObjPath = './models/laptop.obj';
+const materials = [
+    'laptop1.mtl',
+    'laptop2.mtl',
+    'laptop3.mtl',
+];
 // Define an array of objects to showcase
 const objects = [
-    { objPath: './models/laptop.obj', mtlPath: './models/laptop.mtl' },
+    { objPath: laptopObjPath, mtlPath: './models/laptop.mtl' },
     { objPath: './models/camera.obj', mtlPath: './models/camera.mtl' },
     { objPath: './models/headphones.obj', mtlPath: './models/headphones.mtl' },
     { objPath: './models/cup.obj', mtlPath: './models/cup.mtl' },
-    // Add more objects as needed
 ];
 
 let currentObjectIndex = 0;
+
+// Settings object for GUI controls
+const settings = {
+    lightPosX: 5.0,
+    lightPosY: 5.0,
+    lightPosZ: 5.0,
+    lightIntensity: 1.0,
+};
+
+// Initialize dat.GUI
+const gui = new dat.GUI();
+
+// Add sliders to control light position and intensity
+gui.add(settings, 'lightPosX', -10.0, 10.0).name('Light Position X');
+gui.add(settings, 'lightPosY', -10.0, 10.0).name('Light Position Y');
+gui.add(settings, 'lightPosZ', -10.0, 10.0).name('Light Position Z');
+gui.add(settings, 'lightIntensity', 0.0, 10.0).name('Light Intensity');
 
 async function loadOBJ(objUrl, mtlUrl) {
     const [objResponse, mtlResponse] = await Promise.all([
@@ -145,11 +167,7 @@ function parseMTL(mtlText) {
 
 async function loadTexture(device, url) {
     try {
-        const basePath = './models/Materials/Laptop_texture/';
-        const fullUrl = url.startsWith('./') ? url : basePath + url;
-        console.log('Attempting to load texture:', fullUrl);
-
-        const response = await fetch(fullUrl);
+        const response = await fetch(url);
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -158,7 +176,7 @@ async function loadTexture(device, url) {
         const imageData = await createImageBitmap(blob);
 
         const texture = device.createTexture({
-            size: [imageData.width, imageData.height, 1],
+            size: [imageData.width, imageData.height],
             format: 'rgba8unorm',
             usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
         });
@@ -169,25 +187,10 @@ async function loadTexture(device, url) {
             [imageData.width, imageData.height]
         );
 
-        console.log('Texture loaded successfully:', fullUrl);
         return texture;
     } catch (error) {
         console.error('Error loading texture:', url, error);
-        // Create a 1x1 red texture as a fallback
-        const texture = device.createTexture({
-            size: [1, 1, 1],
-            format: 'rgba8unorm',
-            usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST | GPUTextureUsage.RENDER_ATTACHMENT,
-        });
-        const redPixel = new Uint8Array([255, 0, 0, 255]);
-        device.queue.writeTexture(
-            { texture: texture },
-            redPixel,
-            { bytesPerRow: 4 },
-            [1, 1]
-        );
-        console.log('Using fallback texture for:', url);
-        return texture;
+        // Handle the error, perhaps by returning a default texture
     }
 }
 
@@ -207,6 +210,12 @@ async function initWebGPU() {
     return { device, context, presentationFormat, canvas };
 }
 
+
+
+
+
+//main################################
+
 async function main() {
     const { device, context, presentationFormat, canvas } = await initWebGPU();
 
@@ -218,6 +227,8 @@ async function main() {
         normalMatrix : mat4x4<f32>,
         cameraPosition : vec4<f32>,
         lightPosition : vec4<f32>,
+        lightIntensity : f32, // Add light intensity
+        padding : vec3<f32>,  // Padding to align to 16 bytes
     };
     @binding(0) @group(0) var<uniform> uniforms : Uniforms;
     @binding(1) @group(0) var mySampler: sampler;
@@ -256,10 +267,10 @@ async function main() {
         let ambientStrength = 0.2;
         let ambient = ambientStrength;
 
-        let diffuseStrength = 0.7;
+        let diffuseStrength = 0.7 * uniforms.lightIntensity;
         let diffuse = diffuseStrength * max(dot(normal, lightDir), 0.0);
 
-        let specularStrength = 0.5;
+        let specularStrength = 0.5 * uniforms.lightIntensity;
         let shininess = 32.0;
         let specular = specularStrength * pow(max(dot(viewDir, reflectDir), 0.0), shininess);
 
@@ -307,8 +318,8 @@ async function main() {
     postProcess.setDepthTexture(depthTexture);
     postProcess.setContext(context);
 
-    // Create uniform buffer with updated size
-    const uniformBufferSize = 224; // 56 floats * 4 bytes
+    // Update the uniform buffer size
+    const uniformBufferSize = 256; // 60 floats * 4 bytes
     const uniformBuffer = device.createBuffer({
         size: uniformBufferSize,
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -333,10 +344,13 @@ async function main() {
         return buffer;
     }
 
-    async function loadObject(objectIndex) {
+    async function loadObject(objectIndex, mtlPath = null) {
         const object = objects[objectIndex];
-        const { materialGroups, materials } = await loadOBJ(object.objPath, object.mtlPath);
-
+        const objPath = object.objPath;
+        const mtlFilePath = mtlPath || object.mtlPath;
+    
+        const { materialGroups, materials } = await loadOBJ(objPath, mtlFilePath);
+    
         // Load textures for each material
         const textures = await Promise.all(materials.map(async (material) => {
             if (material.texture) {
@@ -358,16 +372,16 @@ async function main() {
                 return texture;
             }
         }));
-
+    
         // Prepare buffers and bind groups for each material group
         const materialData = materialGroups.map((group, index) => {
             if (!group) return null; // Skip empty groups
-
+    
             const positionBuffer = createBuffer(device, new Float32Array(group.positions), GPUBufferUsage.VERTEX);
             const normalBuffer = createBuffer(device, new Float32Array(group.normals), GPUBufferUsage.VERTEX);
             const texCoordBuffer = createBuffer(device, new Float32Array(group.texCoords), GPUBufferUsage.VERTEX);
             const indexBuffer = createBuffer(device, new Uint32Array(group.indices), GPUBufferUsage.INDEX);
-
+    
             const bindGroup = device.createBindGroup({
                 layout: pipeline.getBindGroupLayout(0),
                 entries: [
@@ -376,7 +390,7 @@ async function main() {
                     { binding: 2, resource: textures[index].createView() },
                 ]
             });
-
+    
             return {
                 positionBuffer,
                 normalBuffer,
@@ -386,9 +400,9 @@ async function main() {
                 indicesLength: group.indices.length,
             };
         });
-
+    
         return materialData.filter((data) => data !== null); // Filter out null entries
-    }
+    }    
 
     let materialDataArray = await loadObject(currentObjectIndex);
 
@@ -448,7 +462,7 @@ async function main() {
     // Update the rotation status display
     function updateRotationStatus() {
         const statusElement = document.getElementById('rotationStatus');
-        statusElement.textContent = `Rotation: ${isRotating ? 'On' : 'Off'}`;
+        statusElement.textContent = `Rotation (Press R): ${isRotating ? 'On' : 'Off'}`;
     }
     // Add event listener for key presses
     window.addEventListener('keydown', (e) => {
@@ -510,46 +524,46 @@ async function main() {
         cameraPosition[2] = zoom; // Update camera Z position
     });
 
-
+    // Modify the `updateUniformBuffer` function
     function updateUniformBuffer() {
         const aspect = canvas.width / canvas.height;
         const projectionMatrix = mat4.perspective(mat4.create(), Math.PI / 4, aspect, 0.1, 100.0);
-    
+
         // Create the view matrix
         const viewMatrix = mat4.create();
-    
+
         // Apply camera rotation
         mat4.rotateX(viewMatrix, viewMatrix, cameraRotation[0]);
         mat4.rotateY(viewMatrix, viewMatrix, cameraRotation[1]);
-    
+
         // Apply camera translation
         mat4.translate(viewMatrix, viewMatrix, [-cameraPosition[0], -cameraPosition[1], -cameraPosition[2]]);
-    
+
         const modelMatrix = mat4.create();
         mat4.rotate(modelMatrix, modelMatrix, rotationX, [1, 0, 0]);
         mat4.rotate(modelMatrix, modelMatrix, rotationY, [0, 1, 0]);
-    
+
         const mvpMatrix = mat4.create();
         mat4.multiply(mvpMatrix, projectionMatrix, viewMatrix);
         mat4.multiply(mvpMatrix, mvpMatrix, modelMatrix);
-    
+
         const normalMatrix = mat4.create();
         mat4.invert(normalMatrix, modelMatrix);
         mat4.transpose(normalMatrix, normalMatrix);
-    
+
         // Camera and light positions
-        // Update cameraPosition here if necessary
         const cameraPos = [...cameraPosition, 1.0];
-        const lightPosition = [5, 5, 5, 1.0];
-    
+        const lightPosition = [settings.lightPosX, settings.lightPosY, settings.lightPosZ, 1.0];
+
         // Create uniform data buffer
-        const uniformData = new Float32Array(56);
+        const uniformData = new Float32Array(60); // Adjusted size to include lightIntensity
         uniformData.set(modelMatrix, 0);
         uniformData.set(mvpMatrix, 16);
         uniformData.set(normalMatrix, 32);
         uniformData.set(cameraPos, 48);
         uniformData.set(lightPosition, 52);
-    
+        uniformData[56] = settings.lightIntensity; // Add light intensity at offset 56
+
         device.queue.writeBuffer(uniformBuffer, 0, uniformData);
     }
     
@@ -561,7 +575,7 @@ async function main() {
         const devicePixelRatio = window.devicePixelRatio || 1;
         canvas.width = canvas.clientWidth * devicePixelRatio;
         canvas.height = canvas.clientHeight * devicePixelRatio;
-    
+
         // Update depth texture size
         depthTexture.destroy();
         depthTexture = device.createTexture({
@@ -569,12 +583,12 @@ async function main() {
             format: 'depth24plus',
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
-    
+
         // Update postProcess
         postProcess.setDepthTexture(depthTexture);
         postProcess.resize();
     }
-    
+
 
     // Call resizeCanvas initially and add event listener
     resizeCanvas();
@@ -625,8 +639,23 @@ async function main() {
         postProcess.setEffectMode(effectMode);
     });
 
-    // Initialize the effect mode
-    // postProcess.setEffectMode(effectMode);
+    // Reference to the material selector
+    const materialSelector = document.getElementById('materialSelector');
+
+    // Event listener for material change
+    materialSelector.addEventListener('change', async (event) => {
+        const selectedMaterial = event.target.value;
+        await changeMaterial(selectedMaterial);
+    });
+
+    async function changeMaterial(mtlFileName) {
+        // Build the full path to the material file
+        const mtlPath = `./models/${mtlFileName}`;
+    
+        // Reload the object with the new material
+        materialDataArray = await loadObject(currentObjectIndex, mtlPath);
+    }
+    
 
     function frame() {
         if (isRotating) {

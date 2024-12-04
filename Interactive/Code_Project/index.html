@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.7/dat.gui.min.js"></script>
     <title>WebGPU Model Viewer</title>
     <style>
         body {
@@ -52,7 +53,7 @@
         #rotationStatus {
             position: absolute;
             top: 10px;
-            right: 10px;
+            left: 10px;
             color: white;
             font-size: 1em;
             background-color: rgba(0, 0, 0, 0.7);
@@ -63,7 +64,7 @@
         /* Effect Buttons */
         .effect-button1 {
             position: absolute;
-            bottom: 10px;
+            top: 90px;
             left: 10px;
             background-color: rgba(0, 0, 0, 0.7);
             color: white;
@@ -81,7 +82,7 @@
 
         .effect-button2 {
             position: absolute;
-            bottom: 90px;
+            top: 50px;
             left: 10px;
             background-color: rgba(0, 0, 0, 0.7);
             color: white;
@@ -99,7 +100,7 @@
 
         .effect-button3 {
             position: absolute;
-            bottom: 50px;
+            top: 130px;
             left: 10px;
             background-color: rgba(0, 0, 0, 0.7);
             color: white;
@@ -114,6 +115,20 @@
         .effect-button3:hover {
             background-color: rgba(0, 0, 0, 0.9);
         }
+        /* Material Selector */
+        .material-selector {
+            position: absolute;
+            top: 10px;
+            left: 200px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: none;
+            padding: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            border-radius: 5px;
+            font-family: Arial, sans-serif;
+        }
     </style>
 </head>
 <body>
@@ -123,10 +138,17 @@
     <!-- Right Arrow Button -->
     <button id="nextButton">&#10095;</button>
     <!-- Rotation Status Display -->
-    <button id="noEffectButton" class="effect-button1">No Effect</button>
-    <button id="grayscaleButton" class="effect-button2">Grayscale</button>
-    <button id="invertButton" class="effect-button3">Invert Colors</button>
-    <div id="rotationStatus">Rotation: Off</div>
+    <button id="noEffectButton" class="effect-button3">No Effect</button>
+    <button id="grayscaleButton" class="effect-button1">Grayscale</button>
+    <button id="invertButton" class="effect-button2">Invert Colors</button>
+    <div id="rotationStatus">Rotation (Press R): Off</div>
+    <select id="materialSelector" class="material-selector">
+        <option>Material Changer (Only works with Laptop)</option>
+        <option value="laptop.mtl">Material 1</option>
+        <option value="laptop2.mtl">Material 2</option>
+        <option value="laptop3.mtl">Material 3</option>
+        <!-- Add more materials as needed -->
+    </select>
     <script type="module" src="src/main.js"></script>
 </body>
 </html>

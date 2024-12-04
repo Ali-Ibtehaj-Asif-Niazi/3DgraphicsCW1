@@ -9,7 +9,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd ./models/Materials/Laptop_texture/ROG_Logo1.png
+map_Kd ./models/Materials/Laptop_texture/dell.jpg
 
 newmtl Blue
 Ns 250.000000
@@ -31,7 +31,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 3
-
+map_Kd ./models/Materials/Laptop_texture/leather.jpg
 
 newmtl Display
 Ns 360.000000
@@ -42,7 +42,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.000000
 d 1.000000
 illum 2
-map_Kd ./models/Materials/Laptop_texture/ASUS_Screen.jpg
+map_Kd ./models/Materials/Laptop_texture/1301536.jpg
 
 newmtl Full_HD_Sticker
 Ns 810.000000
@@ -51,8 +51,8 @@ Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 2
-map_Kd ./models/Materials/Laptop_texture/Full_HD.jpg
-map_d ./models/Materials/Laptop_texture/Full_HD.jpg
+map_Kd ./models/Materials/Laptop_texture/4k.jpg
+map_d ./models/Materials/Laptop_texture/4k.jpg
 
 newmtl Glow
 Ns 360.000000
@@ -85,7 +85,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd ./models/Materials/Laptop_texture/mat_black.png
+map_Kd ./models/Materials/Laptop_texture/leather.jpg
 
 newmtl Keycaps_lable_3
 Ns 250.000000
@@ -116,6 +116,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
+map_Kd ./models/Materials/Laptop_texture/leather.jpg
 
 newmtl Matte_Black
 Ns 250.000000
@@ -126,7 +127,7 @@ Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 d 1.000000
 illum 2
-map_Kd ./models/Materials/Laptop_texture/mat_black.png
+map_Kd ./models/Materials/Laptop_texture/leather.jpg
 
 newmtl RTX_Sticker
 Ns 810.000000
@@ -135,8 +136,8 @@ Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 2
-map_Kd ./models/Materials/Laptop_texture/RTX_Sticker.png
-map_d ./models/Materials/Laptop_texture/RTX_Sticker.png
+map_Kd ./models/Materials/Laptop_texture/amd.png
+map_d ./models/Materials/Laptop_texture/amd.png
 
 newmtl Ryzen_Sticker
 Ns 810.000000
@@ -145,8 +146,8 @@ Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000
 illum 2
-map_Kd ./models/Materials/Laptop_texture/Ryzen_Sticker.jpg
-map_d ./models/Materials/Laptop_texture/Ryzen_Sticker.jpg
+map_Kd ./models/Materials/Laptop_texture/intel.jpg
+map_d ./models/Materials/Laptop_texture/intel.jpg
 
 newmtl Web_cam
 Ns 889.743958
